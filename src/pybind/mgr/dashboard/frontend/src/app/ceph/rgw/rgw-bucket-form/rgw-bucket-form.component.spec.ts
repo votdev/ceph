@@ -8,7 +8,7 @@ import * as _ from 'lodash';
 import { ToastrModule } from 'ngx-toastr';
 import { of as observableOf } from 'rxjs';
 
-import { configureTestBed, i18nProviders } from '../../../../testing/unit-test-helper';
+import { configureTestBed, FormHelper, i18nProviders } from '../../../../testing/unit-test-helper';
 import { RgwBucketService } from '../../../shared/api/rgw-bucket.service';
 import { RgwSiteService } from '../../../shared/api/rgw-site.service';
 import { NotificationType } from '../../../shared/enum/notification-type.enum';
@@ -24,6 +24,7 @@ describe('RgwBucketFormComponent', () => {
   let rgwBucketService: RgwBucketService;
   let getPlacementTargetsSpy: jasmine.Spy;
   let rgwBucketServiceGetSpy: jasmine.Spy;
+  let formHelper: FormHelper;
 
   configureTestBed({
     declarations: [RgwBucketFormComponent],
@@ -43,6 +44,7 @@ describe('RgwBucketFormComponent', () => {
     rgwBucketService = TestBed.get(RgwBucketService);
     rgwBucketServiceGetSpy = spyOn(rgwBucketService, 'get');
     getPlacementTargetsSpy = spyOn(TestBed.get(RgwSiteService), 'getPlacementTargets');
+    formHelper = new FormHelper(component.bucketForm);
   });
 
   it('should create', () => {
@@ -313,6 +315,82 @@ describe('RgwBucketFormComponent', () => {
         true,
         true
       );
+    });
+  });
+
+  describe('object locking', () => {
+    it('should check lock enabled checkbox [mode=create]', () => {
+      component.createForm();
+      const control = component.bucketForm.get('lock_enabled');
+      expect(control.disabled).toBeFalsy();
+    });
+
+    it('should check lock enabled checkbox [mode=edit]', () => {
+      component.editing = true;
+      component.createForm();
+      const control = component.bucketForm.get('lock_enabled');
+      expect(control.disabled).toBeTruthy();
+    });
+
+    it('should have the "eitherDaysOrYears" error', () => {
+      formHelper.setValue('lock_enabled', true);
+      ['lock_retention_period_days', 'lock_retention_period_years'].forEach((name: string) => {
+        const control = component.bucketForm.get(name);
+        control.updateValueAndValidity();
+        expect(control.value).toBe(0);
+        expect(control.invalid).toBeTruthy();
+        formHelper.expectError(control, 'eitherDaysOrYears');
+      });
+    });
+
+    it('should have the "pattern" error [1]', () => {
+      formHelper.setValue('lock_enabled', true, true);
+      ['lock_retention_period_days', 'lock_retention_period_years'].forEach((name: string) => {
+        formHelper.setValue(name, '-1');
+        formHelper.expectError(name, 'pattern');
+      });
+    });
+
+    it('should have the "pattern" error [2]', () => {
+      formHelper.setValue('lock_enabled', true, true);
+      ['lock_retention_period_days', 'lock_retention_period_years'].forEach((name: string) => {
+        formHelper.setValue(name, '1.2');
+        formHelper.expectError(name, 'pattern');
+      });
+    });
+
+    it('should have valid values [1]', () => {
+      formHelper.setValue('lock_enabled', true);
+      formHelper.setValue('lock_mode', 'Governance');
+      formHelper.setValue('lock_retention_period_days', '0');
+      formHelper.setValue('lock_retention_period_years', '1');
+      [
+        'lock_enabled',
+        'lock_mode',
+        'lock_retention_period_days',
+        'lock_retention_period_years'
+      ].forEach((name) => {
+        const control = component.bucketForm.get(name);
+        expect(control.valid).toBeTruthy();
+        expect(control.errors).toBeNull();
+      });
+    });
+
+    it('should have valid values [2]', () => {
+      formHelper.setValue('lock_enabled', false);
+      formHelper.setValue('lock_mode', 'Compliance');
+      formHelper.setValue('lock_retention_period_days', '100');
+      formHelper.setValue('lock_retention_period_years', '0');
+      [
+        'lock_enabled',
+        'lock_mode',
+        'lock_retention_period_days',
+        'lock_retention_period_years'
+      ].forEach((name) => {
+        const control = component.bucketForm.get(name);
+        expect(control.valid).toBeTruthy();
+        expect(control.errors).toBeNull();
+      });
     });
   });
 });
