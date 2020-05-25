@@ -1,23 +1,35 @@
 import { Component, Input, OnChanges, OnInit, ViewChild } from '@angular/core';
 
 import { I18n } from '@ngx-translate/i18n-polyfill';
+import { finalize } from 'rxjs/operators';
 
 import { CephServiceService } from '../../../shared/api/ceph-service.service';
 import { OrchestratorService } from '../../../shared/api/orchestrator.service';
 import { ListWithDetails } from '../../../shared/classes/list-with-details.class';
+import { CriticalConfirmationModalComponent } from '../../../shared/components/critical-confirmation-modal/critical-confirmation-modal.component';
+import { ActionLabelsI18n, URLVerbs } from '../../../shared/constants/app.constants';
 import { TableComponent } from '../../../shared/datatable/table/table.component';
 import { CellTemplate } from '../../../shared/enum/cell-template.enum';
+import { Icons } from '../../../shared/enum/icons.enum';
+import { CdTableAction } from '../../../shared/models/cd-table-action';
 import { CdTableColumn } from '../../../shared/models/cd-table-column';
 import { CdTableFetchDataContext } from '../../../shared/models/cd-table-fetch-data-context';
 import { CdTableSelection } from '../../../shared/models/cd-table-selection';
+import { FinishedTask } from '../../../shared/models/finished-task';
 import { Permissions } from '../../../shared/models/permissions';
 import { CephServiceSpec } from '../../../shared/models/service.interface';
 import { AuthStorageService } from '../../../shared/services/auth-storage.service';
+import { TaskWrapperService } from '../../../shared/services/task-wrapper.service';
+import { URLBuilderService } from '../../../shared/services/url-builder.service';
+import { ModalService } from '../../../shared/services/modal.service';
+
+const BASE_URL = 'services';
 
 @Component({
   selector: 'cd-services',
   templateUrl: './services.component.html',
-  styleUrls: ['./services.component.scss']
+  styleUrls: ['./services.component.scss'],
+  providers: [{ provide: URLBuilderService, useValue: new URLBuilderService(BASE_URL) }]
 })
 export class ServicesComponent extends ListWithDetails implements OnChanges, OnInit {
   @ViewChild(TableComponent)
@@ -29,6 +41,7 @@ export class ServicesComponent extends ListWithDetails implements OnChanges, OnI
   @Input() hiddenColumns: string[] = [];
 
   permissions: Permissions;
+  tableActions: CdTableAction[];
 
   checkingOrchestrator = true;
   hasOrchestrator = false;
@@ -37,16 +50,36 @@ export class ServicesComponent extends ListWithDetails implements OnChanges, OnI
   columns: Array<CdTableColumn> = [];
   services: Array<CephServiceSpec> = [];
   isLoadingServices = false;
-  selection = new CdTableSelection();
+  selection: CdTableSelection = new CdTableSelection();
 
   constructor(
+    private actionLabels: ActionLabelsI18n,
     private authStorageService: AuthStorageService,
+    private modalService: ModalService,
     private i18n: I18n,
     private orchService: OrchestratorService,
-    private cephServiceService: CephServiceService
+    private cephServiceService: CephServiceService,
+    private taskWrapperService: TaskWrapperService,
+    private urlBuilder: URLBuilderService
   ) {
     super();
     this.permissions = this.authStorageService.getPermissions();
+    this.tableActions = [
+      {
+        permission: 'create',
+        icon: Icons.add,
+        routerLink: () => this.urlBuilder.getCreate(),
+        name: this.actionLabels.CREATE,
+        canBePrimary: (selection: CdTableSelection) => !selection.hasSelection
+      },
+      {
+        permission: 'delete',
+        icon: Icons.destroy,
+        click: () => this.deleteAction(),
+        disable: () => !this.selection.hasSelection,
+        name: this.actionLabels.DELETE
+      }
+    ];
   }
 
   ngOnInit() {
@@ -121,5 +154,33 @@ export class ServicesComponent extends ListWithDetails implements OnChanges, OnI
         context.error();
       }
     );
+  }
+
+  updateSelection(selection: CdTableSelection) {
+    this.selection = selection;
+  }
+
+  deleteAction() {
+    const service = this.selection.first();
+    this.modalService.show(CriticalConfirmationModalComponent, {
+      itemDescription: this.i18n('Services'),
+      itemNames: [service.service_name],
+      actionDescription: 'delete',
+      submitActionObservable: () =>
+        this.taskWrapperService
+          .wrapTaskAroundCall({
+            task: new FinishedTask(`service/${URLVerbs.DELETE}`, {
+              service_name: service.service_name
+            }),
+            call: this.cephServiceService.delete(service.service_name)
+          })
+          .pipe(
+            finalize(() => {
+              // Force reloading the data table content because it is
+              // auto-reloaded only every 60s.
+              this.table.refreshBtn();
+            })
+          )
+    });
   }
 }

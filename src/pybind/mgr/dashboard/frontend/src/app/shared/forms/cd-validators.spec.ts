@@ -249,6 +249,8 @@ describe('CdValidators', () => {
   describe('requiredIf', () => {
     beforeEach(() => {
       form = new CdFormGroup({
+        a: new FormControl(''),
+        b: new FormControl('xyz'),
         x: new FormControl(true),
         y: new FormControl('abc'),
         z: new FormControl('')
@@ -315,6 +317,69 @@ describe('CdValidators', () => {
         conditionFn
       );
       expect(validatorFn(form.get('y'))).toEqual({ required: true });
+    });
+
+    it('should process extended prerequisites (1)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        y: { op: '!empty' }
+      });
+      expect(validatorFn(form.get('z'))).toEqual({ required: true });
+    });
+
+    it('should process extended prerequisites (2)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        y: { op: '!empty' }
+      });
+      expect(validatorFn(form.get('b'))).toBeNull();
+    });
+
+    it('should process extended prerequisites (3)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        y: { op: 'minLength', arg1: 2 }
+      });
+      expect(validatorFn(form.get('z'))).toEqual({ required: true });
+    });
+
+    it('should process extended prerequisites (4)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        z: { op: 'empty' }
+      });
+      expect(validatorFn(form.get('a'))).toEqual({ required: true });
+    });
+
+    it('should process extended prerequisites (5)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        z: { op: 'empty' }
+      });
+      expect(validatorFn(form.get('y'))).toBeNull();
+    });
+
+    it('should process extended prerequisites (6)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        y: { op: 'empty' }
+      });
+      expect(validatorFn(form.get('z'))).toBeNull();
+    });
+
+    it('should process extended prerequisites (7)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        y: { op: 'minLength', arg1: 4 }
+      });
+      expect(validatorFn(form.get('z'))).toBeNull();
+    });
+
+    it('should process extended prerequisites (8)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        x: { op: 'equal', arg1: true }
+      });
+      expect(validatorFn(form.get('z'))).toEqual({ required: true });
+    });
+
+    it('should process extended prerequisites (9)', () => {
+      const validatorFn = CdValidators.requiredIf({
+        b: { op: '!equal', arg1: 'abc' }
+      });
+      expect(validatorFn(form.get('z'))).toEqual({ required: true });
     });
   });
 

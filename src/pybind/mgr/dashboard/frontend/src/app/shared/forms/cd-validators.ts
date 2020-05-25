@@ -88,11 +88,27 @@ export class CdValidators {
    * then the given function is executed and if it succeeds, the 'required'
    * validation error will be returned, otherwise null.
    * @param {Object} prerequisites An object containing the prerequisites.
+   *   To do additional checks rather than checking for equality you can
+   *   use the extended prerequisite syntax:
+   *     'field_name': { 'op': '<OPERATOR>', arg1: '<OPERATOR_ARGUMENT>' }
+   *   The following operators are supported:
+   *   * empty
+   *   * !empty
+   *   * equal
+   *   * !equal
+   *   * minLength
    *   ### Example
    *   ```typescript
    *   {
    *     'generate_key': true,
    *     'username': 'Max Mustermann'
+   *   }
+   *   ```
+   *   ### Example - Extended prerequisites
+   *   ```typescript
+   *   {
+   *     'generate_key': { 'op': 'equal', 'arg1': true },
+   *     'username': { 'op': 'minLength', 'arg1': 5 }
    *   }
    *   ```
    *   Only if all prerequisites are fulfilled, then the validation of the
@@ -120,7 +136,35 @@ export class CdValidators {
       // Check if all prerequisites met.
       if (
         !Object.keys(prerequisites).every((key) => {
-          return control.parent && control.parent.get(key).value === prerequisites[key];
+          if (!control.parent) {
+            return false;
+          }
+          const value = control.parent.get(key).value;
+          const prerequisite = prerequisites[key];
+          if (_.isObjectLike(prerequisite)) {
+            let result = false;
+            switch (prerequisite['op']) {
+              case 'empty':
+                result = _.isEmpty(value);
+                break;
+              case '!empty':
+                result = !_.isEmpty(value);
+                break;
+              case 'equal':
+                result = value === prerequisite['arg1'];
+                break;
+              case '!equal':
+                result = value !== prerequisite['arg1'];
+                break;
+              case 'minLength':
+                if (_.isString(value)) {
+                  result = value.length >= prerequisite['arg1'];
+                }
+                break;
+            }
+            return result;
+          }
+          return value === prerequisite;
         })
       ) {
         return null;

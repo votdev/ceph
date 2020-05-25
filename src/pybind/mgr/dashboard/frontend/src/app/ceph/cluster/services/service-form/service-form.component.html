@@ -1,0 +1,323 @@
+<div class="cd-col-form">
+  <form #frm="ngForm"
+        [formGroup]="serviceForm"
+        novalidate>
+    <div class="card">
+      <div i18n="form title|Example: Create Pool@@formTitle"
+           class="card-header">{{ action | titlecase }} {{ resource | upperFirst }}</div>
+
+      <div class="card-body">
+        <!-- Service type -->
+        <div class="form-group row">
+          <label class="cd-col-form-label required"
+                 for="service_type"
+                 i18n>Type</label>
+          <div class="cd-col-form-input">
+            <select id="service_type"
+                    class="form-control custom-select"
+                    formControlName="service_type">
+              <option i18n
+                      [ngValue]="null">-- Select a service type --</option>
+              <option *ngFor="let service_type of service_types.sort()"
+                      [value]="service_type">
+                {{ service_type }}
+              </option>
+            </select>
+            <span class="invalid-feedback"
+                  *ngIf="serviceForm.showError('service_type', frm, 'required')"
+                  i18n>This field is required.</span>
+          </div>
+        </div>
+
+        <!-- Service id -->
+        <div class="form-group row"
+             *ngIf="!['rgw'].includes(serviceForm.controls.service_type.value)">
+          <label i18n
+                 class="cd-col-form-label"
+                 for="service_id">Id</label>
+          <div class="cd-col-form-input">
+            <input id="service_id"
+                   class="form-control"
+                   type="text"
+                   formControlName="service_id">
+          </div>
+        </div>
+
+        <!-- Unmanaged -->
+        <!--
+        <div class="form-group row">
+          <div class="cd-col-form-offset">
+            <div class="custom-control custom-checkbox">
+              <input class="custom-control-input"
+                     id="unmanaged"
+                     type="checkbox"
+                     formControlName="unmanaged">
+              <label class="custom-control-label"
+                     for="unmanaged"
+                     i18n>Unmanaged</label>
+            </div>
+          </div>
+        </div>
+        -->
+
+        <!-- Placement -->
+        <div class="form-group row">
+          <label class="cd-col-form-label"
+                 for="placement"
+                 i18n>Placement</label>
+          <div class="cd-col-form-input">
+            <select id="placement"
+                    class="form-control custom-select"
+                    formControlName="placement">
+              <option i18n
+                      value="hosts">Hosts</option>
+              <option i18n
+                      value="label">Label</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Label -->
+        <div *ngIf="serviceForm.controls.placement.value === 'label'"
+             class="form-group row">
+          <label i18n
+                 class="cd-col-form-label"
+                 for="label">Label</label>
+          <div class="cd-col-form-input">
+            <input id="label"
+                   class="form-control"
+                   type="text"
+                   formControlName="label"
+                   [ngbTypeahead]="searchLabels">
+            <span class="invalid-feedback"
+                  *ngIf="serviceForm.showError('label', frm, 'required')"
+                  i18n>This field is required.</span>
+          </div>
+        </div>
+
+        <!-- Hosts -->
+        <div *ngIf="serviceForm.controls.placement.value === 'hosts'"
+             class="form-group row">
+          <label class="cd-col-form-label"
+                 for="hosts"
+                 i18n>Hosts</label>
+          <div class="cd-col-form-input">
+            <cd-select-badges id="hosts"
+                              [data]="serviceForm.controls.hosts.value"
+                              [options]="hosts.options"
+                              [messages]="hosts.messages">
+            </cd-select-badges>
+          </div>
+        </div>
+
+        <!-- count -->
+        <div class="form-group row">
+          <label i18n
+                 class="cd-col-form-label"
+                 for="count">Count</label>
+          <div class="cd-col-form-input">
+            <input id="count"
+                   class="form-control"
+                   type="number"
+                   formControlName="count"
+                   min="1">
+            <span class="invalid-feedback"
+                  *ngIf="serviceForm.showError('count', frm, 'min')"
+                  i18n>The entered value must be >= 1.</span>
+          </div>
+        </div>
+
+        <!-- NFS -->
+        <ng-container *ngIf="serviceForm.controls.service_type.value === 'nfs'">
+          <!-- pool -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   [ngClass]="{'required': serviceForm.controls.service_type.value === 'nfs'}"
+                   for="pool">Pool</label>
+            <div class="cd-col-form-input">
+              <input id="pool"
+                     class="form-control"
+                     type="text"
+                     formControlName="pool">
+              <span class="invalid-feedback"
+                    *ngIf="serviceForm.showError('pool', frm, 'required')"
+                    i18n>This field is required.</span>
+            </div>
+          </div>
+
+          <!-- namespace -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   for="namespace">Namespace</label>
+            <div class="cd-col-form-input">
+              <input id="namespace"
+                     class="form-control"
+                     type="text"
+                     formControlName="namespace">
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- RGW -->
+        <ng-container *ngIf="serviceForm.controls.service_type.value === 'rgw'">
+          <!-- rgw_realm -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   [ngClass]="{'required': serviceForm.controls.ssl.value === true}"
+                   for="rgw_realm">Realm</label>
+            <div class="cd-col-form-input">
+              <input id="rgw_realm"
+                     class="form-control"
+                     type="text"
+                     formControlName="rgw_realm">
+              <span class="invalid-feedback"
+                    *ngIf="serviceForm.showError('rgw_realm', frm, 'required')"
+                    i18n>This field is required.</span>
+            </div>
+          </div>
+
+          <!-- rgw_zone -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   [ngClass]="{'required': serviceForm.controls.ssl.value === true}"
+                   for="rgw_zone">Zone</label>
+            <div class="cd-col-form-input">
+              <input id="rgw_zone"
+                     class="form-control"
+                     type="text"
+                     formControlName="rgw_zone">
+              <span class="invalid-feedback"
+                  *ngIf="serviceForm.showError('rgw_zone', frm, 'required')"
+                  i18n>This field is required.</span>
+            </div>
+          </div>
+
+          <!-- subcluster -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   for="subcluster">Subcluster</label>
+            <div class="cd-col-form-input">
+              <input id="subcluster"
+                     class="form-control"
+                     type="text"
+                     formControlName="subcluster">
+            </div>
+          </div>
+
+          <!-- rgw_frontend_port -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   for="rgw_frontend_port">Port</label>
+            <div class="cd-col-form-input">
+              <input id="rgw_frontend_port"
+                     class="form-control"
+                     type="number"
+                     formControlName="rgw_frontend_port">
+            </div>
+          </div>
+
+          <!-- ssl -->
+          <div class="form-group row">
+            <div class="cd-col-form-offset">
+              <div class="custom-control custom-checkbox">
+                <input class="custom-control-input"
+                       id="ssl"
+                       type="checkbox"
+                       formControlName="ssl">
+                <label class="custom-control-label"
+                       for="ssl"
+                       i18n>SSL</label>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- iSCSI -->
+        <ng-container *ngIf="serviceForm.controls.service_type.value === 'iscsi'">
+          <!-- api_port -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   for="api_port">Port</label>
+            <div class="cd-col-form-input">
+              <input id="api_port"
+                     class="form-control"
+                     type="number"
+                     formControlName="api_port">
+            </div>
+          </div>
+
+          <!-- api_secure -->
+          <div class="form-group row">
+            <div class="cd-col-form-offset">
+              <div class="custom-control custom-checkbox">
+                <input class="custom-control-input"
+                       id="api_secure"
+                       type="checkbox"
+                       formControlName="api_secure">
+                <label class="custom-control-label"
+                       for="api_secure"
+                       i18n>SSL</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- api_user -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   for="api_user">User</label>
+            <div class="cd-col-form-input">
+              <input id="api_user"
+                     class="form-control"
+                     type="text"
+                     formControlName="api_user">
+            </div>
+          </div>
+
+          <!-- api_password -->
+          <div class="form-group row">
+            <label i18n
+                   class="cd-col-form-label"
+                   for="api_password">Password</label>
+            <div class="cd-col-form-input">
+              <div class="input-group">
+                <input id="api_password"
+                       class="form-control"
+                       type="password"
+                       autocomplete="new-password"
+                       formControlName="api_password">
+                <span class="input-group-append">
+                  <button type="button"
+                          class="btn btn-light"
+                          cdPasswordButton="api_password">
+                  </button>
+                  <button type="button"
+                          class="btn btn-light"
+                          cdCopy2ClipboardButton="api_password">
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="card-footer">
+        <div class="text-right">
+          <cd-submit-button (submitAction)="onSubmit()"
+                            i18n="form action button|Example: Create Pool@@formActionButton"
+                            [form]="serviceForm">{{ action | titlecase }} {{ resource | upperFirst }}
+          </cd-submit-button>
+          <cd-back-button></cd-back-button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
